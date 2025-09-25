@@ -83,7 +83,7 @@ async def predict_csv(file: UploadFile = File(...)):
         contents = await file.read()
 
         # Read raw data
-        f = pd.read_csv(io.BytesIO(contents))
+        df = pd.read_csv(io.BytesIO(contents))
 
         # Check required columns
         required_cols = ['CustomerID'] + MODEL_FEATURES
