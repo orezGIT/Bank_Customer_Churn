@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from summarytools import dfSummary
 import numpy as np 
 import seaborn as sns
+from datetime import datetime
 
 
 #%%
@@ -47,7 +48,7 @@ dfSummary(merged_df)
 
 #%%
 
-merged_df.dtypes
+merged_df.isnull().sum()
 
 #%%
 # NOTE: Visualising Numerical Variables
@@ -85,6 +86,8 @@ corr = num_df.corr()
 
 # Sort the correlated values 
 sort_corr = corr.sort_values(by='ChurnStatus', ascending=False)
+
+sort_corr = sort_corr[sort_corr.index]
 
 # show the correlation heatmap of the numerical variable to the target variable (ChurnStatus)
 plt.figure(figsize=(10, 4))
@@ -178,13 +181,12 @@ merged_df.to_csv('processed_data.csv', index=False)
 
 
 dfSummary(merged_df)
-
-
+ #%%
+merged_df.dtypes
 # In[36]:
 
 # Checking rows with Nan values
 merged_df.head(40)
-
 
 # In[37]:
 
@@ -264,7 +266,7 @@ stack_model = Pipeline(steps=[
         )
     )
 ])
-    
+
 # In[154]:
 
 # Filter the dataset for training and testing 
@@ -302,14 +304,45 @@ y_pred = loaded_model.predict(x_test)
 # generate probability of customer churn 
 predict_proba = loaded_model.predict_proba(x_test)[:, 1].round(3)
 
+# Create three level condition 
+conditions = [
+    predict_proba >= 0.8, 
+    (predict_proba > 0.4) & (predict_proba < 0.8), 
+    predict_proba <= 0.4 
+]
+
+risk_level = ["High", "Medium", "Low"]
+
 # Create a new dataframe for readability 
 pred_df = pd.DataFrame({ 
     "Actual Classes": y_test.reset_index(drop=True),
     "Predicted": predict_proba, 
-    "Status": np.where(predict_proba >= 0.8, "Churn", "Not_Churn")
+    "Status": np.select(conditions, risk_level)
     })
 
 print(pred_df)
+
+#%%
+
+from sklearn import metrics 
+from sklearn.metrics import accuracy_score, confusion_matrix
+
+model_accuracy = f'Accuracy Score - {accuracy_score(y_test, y_pred) * 100:.2f}%' 
+print(model_accuracy, '\n')
+
+cm = metrics.confusion_matrix(y_test, y_pred)
+
+print('Confusion Matrix')
+print(cm,'\n\n') 
+
+print('---------------------------------------------------')
+
+report = metrics.classification_report(y_test, y_pred)
+print(report)
+
+
+
+
 
 
 # %%
