@@ -50,11 +50,6 @@ async def predict(file: UploadFile = File(...)):
         customer_id = df['CustomerID']
         X = df[MODEL_FEATURES]
                 
-        # Separate CustomerID and features
-        customer_id = df['CustomerID']
-        X = df.drop('CustomerID', axis=1)
-
-
         # Use your loaded model to predict 
         predictions = loaded_model.predict(X) 
 
@@ -84,8 +79,11 @@ async def predict(file: UploadFile = File(...)):
 async def predict_csv(file: UploadFile = File(...)): 
     try: 
 
+        # Read raw data as bytes first, then decode
+        contents = await file.read()
+
         # Read raw data
-        df = pd.read_csv(io.StringIO(await file.read()))
+        f = pd.read_csv(io.BytesIO(contents))
 
         # Check required columns
         required_cols = ['CustomerID'] + MODEL_FEATURES
@@ -95,7 +93,7 @@ async def predict_csv(file: UploadFile = File(...)):
 
         # Separate CustomerID and features
         customer_id = df['CustomerID']
-        X = df.drop('CustomerID', axis=1)
+        X = df[MODEL_FEATURES]
         
         # Use your loaded model to predict 
         predictions = loaded_model.predict(X) 
@@ -124,7 +122,10 @@ async def predict_csv(file: UploadFile = File(...)):
         output.seek(0)
 
         # Return the predictions as a list 
-        return StreamingResponse(output, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=predictions.csv"})
+        return StreamingResponse(
+            io.BytesIO(output.getvalue().encode('utf-8')), 
+            media_type="text/csv", 
+            headers={"Content-Disposition": "attachment; filename=predictions.csv"})
 
     except Exception as e: 
         return {"error": str(e)}
